@@ -1,0 +1,17 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="DuplicatedCode" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <Languages>
+        <language minSize="996" name="Python" />
+      </Languages>
+    </inspection_tool>
+    <inspection_tool class="IncorrectHttpHeaderInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="customHeaders">
+        <set>
+          <option value="@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY3NzQ3MTkyNiwianRpIjoiZDRiNGNmNDEtMjljNy00YWRhLTgxN2EtZDA0OTI4N2FlYjRiIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImFkbWluQGZwdC5lZHUudm4iLCJuYmYiOjE2Nzc0NzE5MjYsImV4cCI6MTY3NzQ3MjgyNn0.PCohC4xFvl4xZ7zoQJulR2sIY1MJXGwiuWAQOy7fBIM" />
+        </set>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

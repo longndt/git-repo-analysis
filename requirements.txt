@@ -1,0 +1,5 @@
+pandas
+PyGithub
+matplotlib
+google-generativeai
+python-dotenv
