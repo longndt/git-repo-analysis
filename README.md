@@ -68,10 +68,12 @@ GITHUB_TOKEN=your_github_token_here
 Tạo file `student_repo_list.csv`:
 
 ```csv
-student_name,repo_url
-student1,https://github.com/username/repo1
-student2,https://github.com/username/repo2
+student_name,repo_url,github_username
+student1,https://github.com/username/repo1,github_user1
+student2,https://github.com/username/repo2,github_user2
 ```
+
+> **Cột `github_username` (tùy chọn):** nếu điền, tool sẽ **chỉ phân tích commit của sinh viên đó** trong repo (hữu ích cho đồ án nhóm nhiều người chung một repo). Nếu bỏ trống, tool phân tích **toàn bộ** commit của repo.
 
 ## Sử dụng
 

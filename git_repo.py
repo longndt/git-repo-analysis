@@ -1,7 +1,7 @@
 import csv
 import pandas as pd
 from github import Github, Auth
-from datetime import datetime
+from datetime import datetime, timezone
 import matplotlib.pyplot as plt
 from collections import Counter
 import os
@@ -69,16 +69,21 @@ else:
     print("   Add GITHUB_TOKEN to increase limit to 5000/hour")
     print("   Get token at: https://github.com/settings/tokens\n")
 
-def read_repo(repo_name, max_retries=3):
+def read_repo(repo_name, author=None, max_retries=3):
     try:
         # Get the repository
         repo = g.get_repo(repo_name)
 
         data = []
-        commits = repo.get_commits()
+        # Filter server-side by author when a GitHub username is provided
+        if author:
+            commits = repo.get_commits(author=author)
+        else:
+            commits = repo.get_commits()
 
         for commit in commits:
-            if 'merge' in commit.commit.message.lower():
+            # Skip merge commits (they have more than one parent)
+            if len(commit.parents) > 1:
                 continue
 
             commit_info = {
@@ -106,10 +111,13 @@ def read_repo(repo_name, max_retries=3):
                 rate_limit = g.get_rate_limit()
                 core = rate_limit.core
                 reset_time = core.reset
-                wait_seconds = (reset_time - datetime.now()).total_seconds()
+                # PyGithub may return a naive (UTC) or aware datetime; normalize to UTC
+                if reset_time.tzinfo is None:
+                    reset_time = reset_time.replace(tzinfo=timezone.utc)
+                wait_seconds = (reset_time - datetime.now(timezone.utc)).total_seconds()
 
                 print(f"     Remaining requests: {core.remaining}/{core.limit}")
-                print(f"     Rate limit resets at: {reset_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"     Rate limit resets at: {reset_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
                 print(f"     Need to wait: {wait_seconds/60:.1f} minutes")
 
                 if not GITHUB_TOKEN or not GITHUB_TOKEN.strip():
@@ -121,7 +129,7 @@ def read_repo(repo_name, max_retries=3):
                     print(f"\n  ⏳ Waiting {wait_seconds/60:.1f} minutes...")
                     time.sleep(wait_seconds + 10)
                     print(f"  🔄 Retrying: {repo_name}")
-                    return read_repo(repo_name, max_retries=0)
+                    return read_repo(repo_name, author=author, max_retries=0)
                 else:
                     print(f"  ❌ Skipping repository")
                     return []
@@ -306,9 +314,9 @@ def analyze_with_ai(data, warnings, student_name):
     """Phân tích dữ liệu bằng Gemini AI và đưa ra đánh giá"""
 
     # Check if API key is configured
-    if GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE":
+    if not GEMINI_API_KEY or not GEMINI_API_KEY.strip() or GEMINI_API_KEY.strip() == "your_gemini_api_key_here":
         print("  ⚠️  Gemini API key chưa được cấu hình. Bỏ qua AI analysis.")
-        print("     Để sử dụng AI analysis, thêm API key vào biến GEMINI_API_KEY trong code.")
+        print("     Để sử dụng AI analysis, thêm GEMINI_API_KEY vào file .env.")
         return None
 
     try:
@@ -478,7 +486,10 @@ def save_analysis_report(student_name, data, commit_analysis, message_analysis, 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    report_path = os.path.join(output_dir, f'{student_name}_analysis_report.md')
+    # Use an accent-free name for the file path (consistent with CSV/chart),
+    # while keeping the accented name for display inside the report.
+    safe_name = remove_vietnamese_accents(student_name)
+    report_path = os.path.join(output_dir, f'{safe_name}_analysis_report.md')
 
     with open(report_path, 'w', encoding='utf-8') as f:
         # Header
@@ -551,8 +562,14 @@ def process_teams(file_team):
             if not row or len(row) < 2:
                 continue
 
+            # Skip header row if present
+            if row[0].strip().lower() in ('student_name', 'name'):
+                continue
+
             student_name = row[0].strip()
             repo_url = row[1].strip().replace(' ', '').rstrip('/').replace('.git', '')
+            # Optional 3rd column: GitHub username to attribute commits to a single student
+            github_username = row[2].strip() if len(row) >= 3 and row[2].strip() else None
 
             if not student_name or not repo_url:
                 continue
@@ -568,8 +585,10 @@ def process_teams(file_team):
             print(f'\n{"="*80}')
             print(f'Processing: {student_name}')
             print(f'Repository: {repo_name}')
+            if github_username:
+                print(f'GitHub user: {github_username} (lọc commit theo tác giả)')
             print(f'{"="*80}')
-            data = read_repo(repo_name)
+            data = read_repo(repo_name, author=github_username)
 
             if not data:
                 print('❌ No data - skipping')
