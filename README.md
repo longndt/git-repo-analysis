@@ -72,12 +72,12 @@ cp student_repo_list.example.csv student_repo_list.csv
 ```
 
 ```csv
-student_name,repo_url,github_username
-student1,https://github.com/username/repo1,github_user1
-student2,https://github.com/username/repo2,github_user2
+student_name,repo_url
+student1,https://github.com/username1/repo1
+student2,https://github.com/username2/repo2
 ```
 
-> **Cột `github_username` (tùy chọn):** nếu điền, tool sẽ **chỉ phân tích commit của sinh viên đó** trong repo (hữu ích cho đồ án nhóm nhiều người chung một repo). Nếu bỏ trống, tool phân tích **toàn bộ** commit của repo.
+> Tool tự động lấy **username** từ chính `repo_url` (phần chủ sở hữu repo) để lọc commit theo tác giả đó — phù hợp khi mỗi sinh viên có repo riêng. Nếu chủ sở hữu không phải một tài khoản GitHub cá nhân (ví dụ repo thuộc một tổ chức), tool sẽ tự động phân tích **toàn bộ** commit của repo thay vì lọc.
 
 ## Sử dụng
 

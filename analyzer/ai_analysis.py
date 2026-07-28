@@ -12,7 +12,7 @@ from analyzer.vietnamese import remove_vietnamese_accents
 
 # Bump when the prompt template or the data fed into it changes, so cached
 # results from an older, less detailed prompt aren't served after an update.
-_PROMPT_VERSION = 2
+_PROMPT_VERSION = 3
 
 _TIMELINE_SAMPLE_CAP = 150
 
@@ -139,7 +139,7 @@ def analyze_with_ai(data, warnings, student_name, output_dir, message_analysis=N
 
         df['hour'] = df['date-time'].dt.hour
         df['date'] = df['date-time'].dt.date
-        most_active_hour = df['hour'].mode()[0] if not df['hour'].mode().empty else 0
+        most_active_hour = int(df['hour'].mode()[0]) if not df['hour'].mode().empty else 0
 
         small_commits = sum(1 for item in data if (item['lines_added'] + item['lines_deleted']) < 10)
         medium_commits = sum(1 for item in data if 10 <= (item['lines_added'] + item['lines_deleted']) < 100)
@@ -225,64 +225,33 @@ Bạn là một chuyên gia phân tích Git và đánh giá kỹ năng lập tr�
 {chr(10).join(f'⚠️ {w}' for w in summary['warnings']) if summary['warnings'] else '✅ Không có cảnh báo đáng kể'}
 
 ========== YÊU CẦU PHÂN TÍCH ==========
-Hãy đưa ra phân tích CHI TIẾT, CỤ THỂ và THỰC TẾ theo cấu trúc sau. Với MỌI nhận định, PHẢI trích dẫn commit cụ thể (số thứ tự, ngày, hoặc nội dung message trong danh sách trên) hoặc con số cụ thể từ dữ liệu - không được nhận định chung chung kiểu "commit messages khá tốt" mà không có dẫn chứng.
+Viết báo cáo THẬT NGẮN GỌN, chỉ tập trung vào các điểm chính quan trọng nhất - không diễn giải dài dòng, không lặp lại số liệu đã liệt kê ở trên. Mỗi gạch đầu dòng tối đa 1-2 câu và PHẢI kèm dẫn chứng cụ thể (số thứ tự commit, ngày, hoặc con số/% từ dữ liệu) thay vì nhận định chung chung. Tổng độ dài toàn bộ báo cáo khoảng 250-350 từ.
 
-## 1. 📝 Đánh Giá Chất Lượng Commit Messages
-- Phân tích độ rõ ràng, tính mô tả của các commit messages, trích dẫn ít nhất 3 message cụ thể (kèm số thứ tự) làm ví dụ tốt và 3 message làm ví dụ xấu
-- So sánh bảng "Nửa đầu vs Nửa cuối" ở trên: độ dài message có tăng không, tỷ lệ message ngắn có giảm không? Kết luận có tiến bộ hay không DỰA TRÊN SỐ LIỆU
-- Có tuân thủ quy ước commit messages chuẩn không? (ví dụ: conventional commits `feat:`, `fix:`...). Đếm số lượng message tuân thủ / không tuân thủ
-- Đối chiếu với bảng từ khóa: những từ khóa nào bị dùng quá ít (ví dụ `test`, `doc`) so với đặc thù dự án?
+Cấu trúc trả lời (giữ đúng heading, đúng số lượng gạch đầu dòng tối đa cho mỗi mục):
 
-## 2. 📊 Đánh Giá Tần Suất và Quy Mô Commits
-- Tần suất {summary['commits_per_day']:.2f} commits/ngày có hợp lý không? (so với mức lý tưởng 1-3 commits/ngày cho dự án học tập)
-- Dựa vào "Phân bố commits theo tuần" ở trên: tuần nào làm nhiều nhất, tuần nào ít/không có commit? Có tuần nào bất thường không?
-- Phân bố quy mô commits ({summary['commit_size_distribution']['small']} nhỏ / {summary['commit_size_distribution']['medium']} vừa / {summary['commit_size_distribution']['large']} lớn) có hợp lý không?
-- Có dấu hiệu "commit bombing" (nhiều commits nhỏ liên tiếp) hay "commit dumping" (ít commits nhưng quá lớn) không? Chỉ rõ cụm commit nào (theo số thứ tự) thể hiện điều này
-- Khoảng cách dài nhất không commit là {summary['longest_gap_days']} ngày - đây có phải dấu hiệu trì hoãn không?
-- Đánh giá thói quen làm việc: giờ chủ yếu {summary['most_active_hour']}:00, tỷ lệ cuối tuần {summary['weekend_pct']:.1f}%
+## 🎯 Tổng Quan
+1-2 câu tóm tắt chung về hiệu suất làm việc.
 
-## 3. 🎯 Đánh Giá Xu Hướng Phát Triển
-- Dựa trên bảng so sánh nửa đầu/nửa cuối VÀ phân bố theo tuần: xu hướng code có đều đặn hay dồn về cuối kỳ? Chỉ rõ bằng số liệu (ví dụ: "N/{summary['total_commits']} commits trong tuần cuối cùng")
-- Tỷ lệ code added/deleted có hợp lý không? (tỷ lệ deleted quá cao = thiếu kế hoạch)
-- Net lines {summary['net_lines']:,} dòng có phù hợp với quy mô dự án không?
+## ✅ Điểm Mạnh
+Tối đa 3 gạch đầu dòng, mỗi ý kèm dẫn chứng cụ thể.
 
-## 4. ⚠️ Các Vấn Đề Cần Chú Ý
-- Liệt kê CỤ THỂ các vấn đề đáng lo ngại (dựa vào warnings và dữ liệu)
-- Mức độ nghiêm trọng của từng vấn đề
-- Hậu quả có thể xảy ra nếu không khắc phục
+## ⚠️ Vấn Đề Chính
+Tối đa 4 gạch đầu dòng, ưu tiên vấn đề nghiêm trọng nhất trước, mỗi ý kèm dẫn chứng cụ thể (số thứ tự/ngày/số liệu).
 
-## 5. 💡 Khuyến Nghị Chi Tiết
-Đưa ra 5-7 khuyến nghị CỤ THỂ, THỰC TẾ và CÓ THỂ THỰC HIỆN NGAY:
-- Mỗi khuyến nghị phải bao gồm: Vấn đề → Giải pháp → Cách thực hiện cụ thể
-- Ưu tiên theo mức độ quan trọng (Critical → High → Medium → Low)
-- Đưa ra ví dụ cụ thể về cách viết commit message tốt hơn
-- Gợi ý công cụ/quy trình có thể sử dụng
+## 💡 Khuyến Nghị
+Tối đa 4 gạch đầu dòng, mỗi ý là một hành động cụ thể có thể làm ngay (không viết lý thuyết chung chung).
 
-## 6. 🏆 Điểm Mạnh Đáng Khen Ngợi
-- Liệt kê những điểm làm tốt (nếu có) để động viên sinh viên
+## 📈 Đánh Giá Tổng Thể
+Điểm: ?/10 - Xếp loại (Xuất sắc ≥8.5 / Tốt 7-8.4 / Trung bình 5-6.9 / Cần cải thiện <5) - kèm 1 câu lý do ngắn.
 
-## 7. 📈 Đánh Giá Tổng Thể
-- Cho điểm từ 1-10 cho các tiêu chí:
-  + Chất lượng commit messages: ?/10
-  + Tần suất làm việc: ?/10
-  + Quy mô commits: ?/10
-  + Tiến độ phát triển: ?/10
-  + TỔNG ĐIỂM: ?/40
-- Xếp loại: Xuất sắc (35-40) / Tốt (28-34) / Trung bình (20-27) / Cần cải thiện (<20)
-
-LƯU Ý:
-- Phân tích phải DỰA TRÊN DỮ LIỆU CỤ THỂ ở trên (danh sách commit, bảng so sánh, phân bố theo tuần, từ khóa), không chung chung
-- MỖI nhận định trong mục 1-4 phải kèm ít nhất một dẫn chứng cụ thể: số thứ tự commit, ngày tháng, nội dung message nguyên văn, hoặc con số/tỷ lệ % tính từ dữ liệu
-- Không lặp lại nguyên văn các dòng dữ liệu đã cho - hãy DIỄN GIẢI Ý NGHĨA của chúng
-- Khuyến nghị phải THỰC TẾ và CÓ THỂ ÁP DỤNG NGAY
-- Trả lời bằng TIẾNG VIỆT, văn phong chuyên nghiệp nhưng gần gũi, độ dài đầy đủ cho cả 7 mục (không rút gọn)
+LƯU Ý: Trả lời bằng TIẾNG VIỆT, văn phong chuyên nghiệp, súc tích. Không thêm mục nào ngoài 5 mục trên, không lặp lại nguyên văn dữ liệu đầu vào.
 """
 
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
                 temperature=0.3,
-                max_output_tokens=8192,
+                max_output_tokens=4096,
             ),
         )
 

@@ -28,7 +28,6 @@ def _parse_student_rows(file_team):
 
             student_name = row[0].strip()
             repo_url = row[1].strip().replace(' ', '').rstrip('/').replace('.git', '')
-            github_username = row[2].strip() if len(row) >= 3 and row[2].strip() else None
 
             if not student_name or not repo_url:
                 continue
@@ -38,8 +37,14 @@ def _parse_student_rows(file_team):
                 print(f'Invalid URL: {repo_url}')
                 continue
 
-            repo_name = f'{url_parts[-2]}/{url_parts[-1]}'
-            rows.append((student_name, repo_name, github_username))
+            owner, repo = url_parts[-2], url_parts[-1]
+            repo_name = f'{owner}/{repo}'
+            # Repo owner doubles as the author filter: for a student's own repo
+            # this scopes commits to them and drops noise (template/bootstrap
+            # commits from someone else). If the owner isn't a real GitHub user
+            # (e.g. an org), _resolve_author_id returns None and we fall back
+            # to analyzing every commit, same as the old "no filter" behavior.
+            rows.append((student_name, repo_name, owner))
     return rows
 
 
@@ -94,7 +99,10 @@ def process_teams(file_team, output_dir='output', model_name='gemini-2.5-flash',
 
     if workers <= 1 or len(rows) <= 1:
         for student_name, repo_name, github_username in rows:
-            process_student(student_name, repo_name, github_username, g, output_dir, model_name, skip_ai)
+            try:
+                process_student(student_name, repo_name, github_username, g, output_dir, model_name, skip_ai)
+            except Exception as e:
+                print(f'Error processing {student_name}: {e}')
         return
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
