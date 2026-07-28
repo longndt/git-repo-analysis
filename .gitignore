@@ -8,3 +8,7 @@ output/
 venv/
 __pycache__/
 *.pyc
+
+# Real student roster (contains names + repo URLs) - use
+# student_repo_list.example.csv as the shareable template
+student_repo_list.csv

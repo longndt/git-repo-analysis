@@ -10,7 +10,7 @@ Tool phân tích lịch sử commit từ GitHub repositories, tạo báo cáo ch
 - **Biểu đồ trực quan**: 6 loại biểu đồ phân tích xu hướng và tần suất commit
 - **Phân tích commit messages**: Đánh giá chất lượng và từ khóa phổ biến
 - **Cảnh báo tự động**: Phát hiện các vấn đề về số lượng, quy mô commits
-- **AI Analysis**: Sử dụng Gemini AI để đưa ra đánh giá và khuyến nghị
+- **AI Analysis**: Gemini AI phân tích dựa trên toàn bộ lịch sử commit (không chỉ vài commit đầu/cuối), kèm phân bố theo tuần, so sánh nửa đầu/nửa cuối dự án, từ khóa message — yêu cầu mọi nhận định phải có dẫn chứng cụ thể
 - **Báo cáo Markdown**: Xuất báo cáo chi tiết định dạng .md
 
 ## Cấu trúc output
@@ -65,7 +65,11 @@ GITHUB_TOKEN=your_github_token_here
 
 ### 5. Danh sách repository
 
-Tạo file `student_repo_list.csv`:
+Tạo file `student_repo_list.csv` từ template (`student_repo_list.csv` chứa tên thật của sinh viên nên đã được thêm vào `.gitignore` — không commit lên Git):
+
+```bash
+cp student_repo_list.example.csv student_repo_list.csv
+```
 
 ```csv
 student_name,repo_url,github_username
@@ -81,10 +85,44 @@ student2,https://github.com/username/repo2,github_user2
 python git_repo.py
 ```
 
+Các tùy chọn dòng lệnh:
+
+| Flag | Mặc định | Ý nghĩa |
+|------|----------|---------|
+| `--input` | `student_repo_list.csv` | File CSV danh sách sinh viên/repo |
+| `--output-dir` | `output` | Thư mục ghi kết quả |
+| `--model` | `gemini-2.5-flash` | Model Gemini dùng cho AI analysis |
+| `--skip-ai` | tắt | Bỏ qua bước gọi Gemini (vẫn có CSV, biểu đồ, cảnh báo rule-based) |
+| `--workers` | `4` | Số sinh viên xử lý song song (đặt `1` để chạy tuần tự) |
+
+Ví dụ:
+
+```bash
+python git_repo.py --input teams.csv --output-dir results --workers 8
+```
+
 Tool sẽ:
-1. Đọc danh sách repositories từ `student_repo_list.csv`
-2. Phân tích từng repository
-3. Tạo báo cáo và biểu đồ trong thư mục `output/`
+1. Đọc danh sách repositories từ file CSV
+2. Phân tích từng repository (commit history được lấy qua GitHub GraphQL API khi có `GITHUB_TOKEN`, giúp giảm số request so với REST API)
+3. Tạo báo cáo và biểu đồ trong thư mục output (mặc định `output/`)
+
+Kết quả phân tích AI được cache theo nội dung commit trong `output/<sinh_viên>/.ai_cache/` — chạy lại tool trên dữ liệu chưa đổi sẽ không gọi lại Gemini API.
+
+## Cấu trúc mã nguồn
+
+```
+git_repo.py          # Entry point mỏng, gọi analyzer.cli.main()
+analyzer/
+├── config.py         # Đọc .env, hằng số mặc định
+├── vietnamese.py      # Chuẩn hóa tên tiếng Việt
+├── github_client.py   # Lấy commit qua GraphQL (fallback REST khi không có token)
+├── analysis.py        # Phân tích commit message + cảnh báo rule-based
+├── ai_analysis.py      # Gọi Gemini AI + cache kết quả
+├── charts.py           # Vẽ biểu đồ contribution
+├── report.py            # Ghi CSV + báo cáo Markdown
+├── pipeline.py           # Điều phối xử lý từng sinh viên (tuần tự hoặc song song)
+└── cli.py                 # argparse + entry point
+```
 
 ## Output
 
@@ -104,3 +142,4 @@ Mỗi sinh viên sẽ có thư mục riêng chứa:
 - File `.env` đã được thêm vào `.gitignore` để không commit API keys lên Git
 - Sử dụng `.env.example` làm template để chia sẻ cấu hình
 - Không hard-code API keys trong source code
+- File `student_repo_list.csv` (chứa tên thật + repo URL sinh viên) cũng nằm trong `.gitignore`; dùng `student_repo_list.example.csv` làm template để chia sẻ
